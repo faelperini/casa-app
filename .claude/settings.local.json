@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls d:/casa-app/src/app/api/auth/[...nextauth])",
+      "Bash(head -20 /d/casa-app/src/app/api/auth/[...nextauth]/route.ts)",
+      "Bash(npx prisma:*)",
+      "Bash(node -e \"const { createRequire } = require\\(''module''\\); const req = createRequire\\(import.meta ? import.meta.url : __filename\\); try { const { PrismaClient } = req\\(''.prisma/client''\\); const p = new PrismaClient\\(\\); p.$connect\\(\\).then\\(\\(\\) => { console.log\\(''DB OK''\\); p.$disconnect\\(\\); }\\).catch\\(e => console.error\\(''DB ERROR:'', e.message\\)\\); } catch\\(e\\) { console.error\\(''CLIENT ERROR:'', e.message\\); }\")",
+      "Bash(npx tsx:*)",
+      "Bash(tasklist)",
+      "Bash(findstr -i \"node\")",
+      "Bash(ls d:/casa-app/.env*)",
+      "Bash(npm install:*)"
+    ]
+  }
+}

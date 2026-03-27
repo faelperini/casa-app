@@ -1,0 +1,120 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --cream-50: #fdfaf4;
+    --cream-100: #f9f2e3;
+    --cream-200: #f2e4c4;
+    --cream-300: #e8cea0;
+    --terra-400: #c4714a;
+    --terra-500: #b05a35;
+    --terra-600: #8f4527;
+    --forest-700: #2d4a3e;
+    --forest-800: #1e3329;
+    --forest-900: #121f19;
+    --stone-warm: #6b5f52;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    min-height: 100dvh;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--cream-100);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--cream-300);
+    border-radius: 99px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--stone-warm);
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-cream-50 rounded-3xl shadow-card border border-cream-200 transition-shadow duration-200;
+  }
+  .card:hover {
+    @apply shadow-card-hover;
+  }
+
+  .btn-primary {
+    @apply bg-forest-800 text-cream-50 font-body font-semibold rounded-xl px-5 py-2.5 text-sm
+           hover:bg-forest-700 active:scale-95 transition-all duration-150 cursor-pointer
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply bg-cream-200 text-forest-800 font-body font-semibold rounded-xl px-5 py-2.5 text-sm
+           hover:bg-cream-300 active:scale-95 transition-all duration-150 cursor-pointer
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-terra {
+    @apply bg-terra-500 text-cream-50 font-body font-semibold rounded-xl px-5 py-2.5 text-sm
+           hover:bg-terra-600 active:scale-95 transition-all duration-150 cursor-pointer
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .input {
+    @apply w-full bg-cream-100 border border-cream-300 rounded-xl px-4 py-2.5 text-sm
+           font-body text-forest-800 placeholder:text-stone-warm
+           focus:outline-none focus:border-forest-700 focus:ring-2 focus:ring-forest-700/10
+           transition-all duration-150;
+  }
+
+  .label {
+    @apply block text-xs font-semibold uppercase tracking-widest text-stone-warm mb-1.5;
+  }
+}
+
+/* Prevent iOS Safari zoom on input focus (triggered when font-size < 16px) */
+@media (pointer: coarse) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}
+
+/* Page entry animation */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.4s ease both;
+}
+
+.animate-fade-up-1 { animation-delay: 0.05s; }
+.animate-fade-up-2 { animation-delay: 0.10s; }
+.animate-fade-up-3 { animation-delay: 0.15s; }
+.animate-fade-up-4 { animation-delay: 0.20s; }
+.animate-fade-up-5 { animation-delay: 0.25s; }
+
+/* Grain texture overlay */
+.grain::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 128px 128px;
+  z-index: 9999;
+}
