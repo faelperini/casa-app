@@ -1,11 +1,11 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft, Home,
-  Copy, Check, Pencil, Users
+  Copy, Check, Pencil, Users, Trash2, LogOut
 } from "lucide-react";
 import { ShoppingCard } from "@/components/group/ShoppingCard";
 import { DebtsCard } from "@/components/group/DebtsCard";
@@ -42,32 +42,23 @@ export function GroupClient({ group: initial, currentUserId, currentUserRole }: 
   const [editImage, setEditImage]       = useState(initial.image ?? null);
   const [saving, setSaving]             = useState(false);
   const [copied, setCopied]             = useState(false);
-
-  function handleExpandShopping() {
-    if (window.innerWidth < 1024) {
-      router.push(`/grupos/${group.id}/compras`);
-    } else {
-      setShowShopping(true);
-    }
-  }
-
-  function handleExpandDebts() {
-    if (window.innerWidth < 1024) {
-      router.push(`/grupos/${group.id}/debitos`);
-    } else {
-      setShowDebts(true);
-    }
-  }
-
-  function handleExpandRecipes() {
-    if (window.innerWidth < 1024) {
-      router.push(`/grupos/${group.id}/receitas`);
-    } else {
-      setShowRecipes(true);
-    }
-  }
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting]           = useState(false);
 
   const isAdmin = currentUserRole === "ADMIN";
+
+  function handleExpandShopping() {
+    if (window.innerWidth < 1024) router.push(`/grupos/${group.id}/compras`);
+    else setShowShopping(true);
+  }
+  function handleExpandDebts() {
+    if (window.innerWidth < 1024) router.push(`/grupos/${group.id}/debitos`);
+    else setShowDebts(true);
+  }
+  function handleExpandRecipes() {
+    if (window.innerWidth < 1024) router.push(`/grupos/${group.id}/receitas`);
+    else setShowRecipes(true);
+  }
 
   async function saveGroupInfo() {
     setSaving(true);
@@ -83,6 +74,34 @@ export function GroupClient({ group: initial, currentUserId, currentUserRole }: 
         setShowEdit(false);
       }
     } finally { setSaving(false); }
+  }
+
+  async function deleteGroup() {
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/groups/${group.id}`, { method: "DELETE" });
+      if (res.ok) router.push("/dashboard");
+    } finally { setDeleting(false); }
+  }
+
+  async function removeMember(userId: string) {
+    const res = await fetch(`/api/groups/${group.id}/members`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+    if (res.ok) {
+      setGroup((g) => ({ ...g, members: g.members.filter((m) => m.user.id !== userId) }));
+    }
+  }
+
+  async function leaveGroup() {
+    const res = await fetch(`/api/groups/${group.id}/members`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: currentUserId }),
+    });
+    if (res.ok) router.push("/dashboard");
   }
 
   function copyCode() {
@@ -103,7 +122,7 @@ export function GroupClient({ group: initial, currentUserId, currentUserRole }: 
 
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-8">
         {/* Top bar */}
-        <div className="flex items-center justify-between mb-8 animate-fade-up">
+        <div className="relative z-10 flex items-center justify-between mb-8 animate-fade-up">
           <div className="flex items-center gap-3">
             <Link href="/dashboard"
               className="w-9 h-9 rounded-xl bg-cream-50 border border-cream-200 flex items-center justify-center
@@ -120,13 +139,31 @@ export function GroupClient({ group: initial, currentUserId, currentUserRole }: 
         </div>
 
         {/* Group header */}
-        <div className="card p-6 mb-6 animate-fade-up animate-fade-up-1">
+        <div className="relative card p-6 mb-6 animate-fade-up animate-fade-up-1">
+
+          {/* Botão fixo no canto superior direito do card */}
+          <div className="absolute top-4 right-4">
+            {isAdmin ? (
+              <button onClick={() => setShowEdit(true)}
+                className="w-9 h-9 rounded-xl bg-cream-100 hover:bg-cream-200
+                           flex items-center justify-center transition-colors cursor-pointer">
+                <Pencil size={15} className="text-stone-warm" />
+              </button>
+            ) : (
+              <button onClick={leaveGroup}
+                className="flex items-center gap-1.5 rounded-xl bg-cream-100 hover:bg-cream-200
+                           px-3 h-9 font-body text-xs text-terra-500 hover:text-terra-600 transition-colors cursor-pointer">
+                <LogOut size={14} />
+                <span className="hidden sm:inline">Sair da casa</span>
+              </button>
+            )}
+          </div>
+
           <div className="flex flex-col sm:flex-row sm:items-start gap-4">
             {/* Avatar */}
             <div className="flex-shrink-0 w-[72px] h-[72px] rounded-2xl overflow-hidden relative">
               {group.image ? (
-                <Image src={group.image} alt={group.name} fill
-                  className="object-cover" />
+                <Image src={group.image} alt={group.name} fill className="object-cover" />
               ) : (
                 <div className="w-full h-full bg-forest-800 flex items-center justify-center">
                   <Home size={28} className="text-cream-100" />
@@ -135,22 +172,13 @@ export function GroupClient({ group: initial, currentUserId, currentUserRole }: 
             </div>
 
             {/* Info */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <h1 className="font-display text-2xl sm:text-3xl font-black text-forest-800 leading-tight">
-                    {group.name}
-                  </h1>
-                  {group.description && (
-                    <p className="font-body text-sm text-stone-warm mt-1">{group.description}</p>
-                  )}
-                </div>
-                {isAdmin && (
-                  <button onClick={() => setShowEdit(true)}
-                    className="flex-shrink-0 w-9 h-9 rounded-xl bg-cream-100 hover:bg-cream-200
-                               flex items-center justify-center transition-colors cursor-pointer">
-                    <Pencil size={15} className="text-stone-warm" />
-                  </button>
+            <div className="flex-1 min-w-0 pr-10">
+              <div>
+                <h1 className="font-display text-2xl sm:text-3xl font-black text-forest-800 leading-tight">
+                  {group.name}
+                </h1>
+                {group.description && (
+                  <p className="font-body text-sm text-stone-warm mt-1">{group.description}</p>
                 )}
               </div>
 
@@ -173,9 +201,15 @@ export function GroupClient({ group: initial, currentUserId, currentUserRole }: 
         </div>
 
         {/* Members bar */}
-        <MembersBar members={group.members} currentUserId={currentUserId} />
+        <MembersBar
+          members={group.members}
+          currentUserId={currentUserId}
+          isAdmin={isAdmin}
+          onRemoveMember={isAdmin ? removeMember : undefined}
+          onLeave={!isAdmin ? leaveGroup : undefined}
+        />
 
-        {/* Cards grid — desktop: 3 cols, mobile: 1 col stacked */}
+        {/* Cards grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="animate-fade-up animate-fade-up-2">
             <ShoppingCard
@@ -240,9 +274,8 @@ export function GroupClient({ group: initial, currentUserId, currentUserRole }: 
         />
       </Modal>
 
-      <Modal open={showEdit} onClose={() => setShowEdit(false)} title="Editar casa">
+      <Modal open={showEdit} onClose={() => { setShowEdit(false); setConfirmDelete(false); }} title="Editar casa">
         <div className="space-y-4">
-          {/* Group image upload */}
           <div className="flex justify-center">
             <div className="flex flex-col items-center gap-1">
               <ImageUpload
@@ -265,10 +298,41 @@ export function GroupClient({ group: initial, currentUserId, currentUserRole }: 
               onChange={(e) => setEditDesc(e.target.value)} placeholder="Descreva a casa..." />
           </div>
           <div className="flex gap-2 pt-1">
-            <button onClick={() => setShowEdit(false)} className="btn-secondary flex-1">Cancelar</button>
+            <button onClick={() => { setShowEdit(false); setConfirmDelete(false); }} className="btn-secondary flex-1">Cancelar</button>
             <button onClick={saveGroupInfo} disabled={saving || !editName.trim()} className="btn-primary flex-1">
               {saving ? "Salvando…" : "Salvar"}
             </button>
+          </div>
+
+          {/* Zona de perigo */}
+          <div className="border-t border-cream-200 pt-3">
+            {confirmDelete ? (
+              <div className="space-y-2">
+                <p className="font-body text-xs text-stone-warm text-center">
+                  Tem certeza? Todos os dados da casa serão perdidos.
+                </p>
+                <div className="flex gap-2">
+                  <button onClick={() => setConfirmDelete(false)} className="btn-secondary flex-1">
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={deleteGroup}
+                    disabled={deleting}
+                    className="flex-1 rounded-2xl bg-terra-500 hover:bg-terra-600 disabled:opacity-60
+                               text-cream-50 font-body text-sm font-semibold py-2.5 transition-colors cursor-pointer">
+                    {deleting ? "Excluindo…" : "Confirmar exclusão"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="w-full flex items-center justify-center gap-1.5 font-body text-xs
+                           text-terra-500 hover:text-terra-600 transition-colors cursor-pointer py-1">
+                <Trash2 size={13} />
+                Excluir casa
+              </button>
+            )}
           </div>
         </div>
       </Modal>

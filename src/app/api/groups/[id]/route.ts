@@ -49,3 +49,19 @@ export async function PATCH(req: Request, { params }: Params) {
   const group = await prisma.group.update({ where: { id: params.id }, data });
   return NextResponse.json(group);
 }
+
+// DELETE /api/groups/[id] — exclui o grupo (somente admin)
+export async function DELETE(_req: Request, { params }: Params) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const membership = await prisma.groupMember.findUnique({
+    where: { userId_groupId: { userId: session.user.id, groupId: params.id } },
+  });
+  if (!membership || membership.role !== "ADMIN") {
+    return NextResponse.json({ error: "Apenas admins podem excluir o grupo" }, { status: 403 });
+  }
+
+  await prisma.group.delete({ where: { id: params.id } });
+  return NextResponse.json({ ok: true });
+}

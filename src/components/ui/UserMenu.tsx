@@ -47,7 +47,7 @@ export function UserMenu({ inline = false }: { inline?: boolean }) {
         <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
       )}
 
-      <div className={inline ? "relative" : "fixed top-8 right-4 sm:right-6 z-50"}>
+      <div className={inline ? "relative z-50" : "fixed top-8 right-4 sm:right-6 z-50"}>
         <button
           onClick={() => setMenuOpen((o) => !o)}
           className="flex items-center gap-2.5 bg-cream-50/90 backdrop-blur-sm border border-cream-200
