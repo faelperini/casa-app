@@ -15,7 +15,8 @@ diagrama ER, o dicionário de dados, a matriz de permissões, as decisões e os 
 
 Next.js 14 (App Router) · TypeScript strict · Tailwind CSS 3 · Prisma 5 + PostgreSQL (Neon) · NextAuth v4
 (Google, sessão JWT + PrismaAdapter) · Cloudinary (upload de imagens) · Vercel · lucide-react ·
-react-markdown + remark-gfm (receitas). Sem biblioteca de testes.
+react-markdown + remark-gfm (receitas) · @dnd-kit core/sortable/utilities/modifiers (reordenar os cards da casa).
+Sem biblioteca de testes.
 
 ## Comandos
 
@@ -45,6 +46,7 @@ src/middleware.ts               protege /dashboard/* e /grupos/* (next-auth/midd
 src/lib/auth.ts                 authOptions do NextAuth (Google, JWT, session.user.id = token.sub)
 src/lib/prisma.ts               singleton do PrismaClient
 src/lib/debts.ts                tipo Debt + computeBalances (saldo líquido por pessoa, em centavos inteiros)
+src/lib/cards.ts                CARD_KEYS + resolveCardOrder (ordem dos cards; tolera chave nova/removida)
 src/types/next-auth.d.ts        adiciona user.id à Session
 src/hooks/useIsDesktop.ts       true só com ponteiro preciso (evita autoFocus que abre teclado no mobile)
 src/app/
@@ -55,7 +57,8 @@ src/app/
   api/                          rotas REST (tabela abaixo)
 src/components/
   dashboard/                    DashboardClient, ProfilePanel
-  group/                        GroupClient, MembersBar, {Shopping,Debts,Recipes}Card e ...PageClient
+  group/                        GroupClient, CardsGrid (ordem + modo reordenar), MembersBar,
+                                {Shopping,Debts,Recipes}Card e ...PageClient, DebtBalances, MiniAvatar
   ui/                           Modal (portal), ImageUpload, UserMenu, Footer
 ```
 
@@ -79,6 +82,7 @@ Todas exigem sessão (`getServerSession(authOptions)` → 401). "membro" = exist
 | POST / PATCH / DELETE | `/api/groups/[id]/shopping` | membro | adiciona `{name, quantity}` / alterna `{itemId, checked}` / remove `{itemId}` |
 | POST / PATCH | `/api/groups/[id]/debts` | membro | cria `{description, amount, toUserId}` / quita `{debtId}` ou em lote `{debtIds}` (só PENDING da casa em que o usuário é parte; responde `{count}`) |
 | POST / DELETE | `/api/groups/[id]/recipes` | membro | cria / remove `{recipeId}` (só o autor) |
+| PATCH | `/api/groups/[id]/cards` | membro | salva `{order}` (ordem dos cards **deste** morador nesta casa; `updateMany` na própria associação autoriza e grava) |
 | GET / PATCH | `/api/user` | login | perfil / atualiza `{name, bio, birthDate}` |
 | POST | `/api/upload` | login | multipart `file` → Cloudinary (unsigned, imagem ≤ 5 MB) → `{url}` |
 | GET / POST | `/api/auth/[...nextauth]` | — | NextAuth |
@@ -95,6 +99,9 @@ Rotas com sub-recurso usam o método HTTP + **body JSON** para identificar o ite
 - **Rotas de API:** repetir o padrão existente — checar sessão, checar `GroupMember` via chave composta
   `userId_groupId`, validar body, responder `NextResponse.json(..., { status })`. O helper `assertMember` está
   duplicado em shopping/debts/recipes.
+- **Card novo na página da casa:** acrescentar a chave em `CARD_KEYS` (`src/lib/cards.ts`), o nó em `cards={{…}}` no
+  `GroupClient` e o título/ícone em `CARD_META` (`CardsGrid.tsx`). `resolveCardOrder` põe o card no fim para quem já
+  salvou uma ordem — nada de migração de dados.
 - **Tipos:** declarados localmente em cada componente (não há arquivo de tipos compartilhado).
 - **Ícones:** `lucide-react`. **Imagens:** `next/image` só com hosts liberados em `next.config.js`
   (`*.googleusercontent.com`, `res.cloudinary.com`).

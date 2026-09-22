@@ -86,6 +86,9 @@ model GroupMember {
   role     GroupMemberRole @default(MEMBER)
   joinedAt DateTime        @default(now())
 
+  // Ordem dos cards da casa, escolhida por este morador. [] = ordem padrão. Ver src/lib/cards.ts
+  cardOrder String[] @default([])
+
   userId  String
   groupId String
 

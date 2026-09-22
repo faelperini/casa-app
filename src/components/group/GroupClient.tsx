@@ -11,9 +11,11 @@ import { ShoppingCard } from "@/components/group/ShoppingCard";
 import { DebtsCard } from "@/components/group/DebtsCard";
 import { RecipesCard } from "@/components/group/RecipesCard";
 import { MembersBar } from "@/components/group/MembersBar";
+import { CardsGrid } from "@/components/group/CardsGrid";
 import { Modal } from "@/components/ui/Modal";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import { UserMenu } from "@/components/ui/UserMenu";
+import { type CardKey } from "@/lib/cards";
 
 type Member = {
   id: string; role: string;
@@ -28,9 +30,11 @@ type Group = {
   members: Member[]; shoppingItems: ShoppingItem[]; debts: Debt[]; recipes: Recipe[];
 };
 
-type Props = { group: Group; currentUserId: string; currentUserRole: string };
+type Props = {
+  group: Group; currentUserId: string; currentUserRole: string; initialCardOrder: CardKey[];
+};
 
-export function GroupClient({ group: initial, currentUserId, currentUserRole }: Props) {
+export function GroupClient({ group: initial, currentUserId, currentUserRole, initialCardOrder }: Props) {
   const router = useRouter();
   const [group, setGroup]               = useState(initial);
   const [showEdit, setShowEdit]         = useState(false);
@@ -58,6 +62,18 @@ export function GroupClient({ group: initial, currentUserId, currentUserRole }: 
   function handleExpandRecipes() {
     if (window.innerWidth < 1024) router.push(`/grupos/${group.id}/receitas`);
     else setShowRecipes(true);
+  }
+
+  async function saveCardOrder(order: CardKey[]) {
+    const res = await fetch(`/api/groups/${group.id}/cards`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({})) as Record<string, string>;
+      throw new Error(data.error ?? "Erro ao salvar a ordem");
+    }
   }
 
   async function saveGroupInfo() {
@@ -209,36 +225,40 @@ export function GroupClient({ group: initial, currentUserId, currentUserRole }: 
           onLeave={!isAdmin ? leaveGroup : undefined}
         />
 
-        {/* Cards grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <div className="animate-fade-up animate-fade-up-2">
-            <ShoppingCard
-              groupId={group.id}
-              items={group.shoppingItems}
-              onItemsChange={(items) => setGroup((g) => ({ ...g, shoppingItems: items }))}
-              onExpand={handleExpandShopping}
-            />
-          </div>
-          <div className="animate-fade-up animate-fade-up-3">
-            <DebtsCard
-              groupId={group.id}
-              debts={group.debts}
-              members={group.members}
-              currentUserId={currentUserId}
-              onDebtsChange={(debts) => setGroup((g) => ({ ...g, debts }))}
-              onExpand={handleExpandDebts}
-            />
-          </div>
-          <div className="animate-fade-up animate-fade-up-4">
-            <RecipesCard
-              groupId={group.id}
-              recipes={group.recipes}
-              currentUserId={currentUserId}
-              onRecipesChange={(recipes) => setGroup((g) => ({ ...g, recipes }))}
-              onExpand={handleExpandRecipes}
-            />
-          </div>
-        </div>
+        {/* Cards grid — ordem escolhida por este morador nesta casa */}
+        <CardsGrid
+          initialOrder={initialCardOrder}
+          onSave={saveCardOrder}
+          cards={{
+            shopping: (
+              <ShoppingCard
+                groupId={group.id}
+                items={group.shoppingItems}
+                onItemsChange={(items) => setGroup((g) => ({ ...g, shoppingItems: items }))}
+                onExpand={handleExpandShopping}
+              />
+            ),
+            debts: (
+              <DebtsCard
+                groupId={group.id}
+                debts={group.debts}
+                members={group.members}
+                currentUserId={currentUserId}
+                onDebtsChange={(debts) => setGroup((g) => ({ ...g, debts }))}
+                onExpand={handleExpandDebts}
+              />
+            ),
+            recipes: (
+              <RecipesCard
+                groupId={group.id}
+                recipes={group.recipes}
+                currentUserId={currentUserId}
+                onRecipesChange={(recipes) => setGroup((g) => ({ ...g, recipes }))}
+                onExpand={handleExpandRecipes}
+              />
+            ),
+          }}
+        />
       </div>
 
       <Modal open={showShopping} onClose={() => setShowShopping(false)} title="Lista de Compras"

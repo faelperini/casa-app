@@ -7,8 +7,8 @@ comandos e convenções: [CLAUDE.md](../CLAUDE.md).
 Tomou uma decisão → seção 6. Achou/corrigiu um problema → seção 7. **Sempre** acrescente uma linha datada no topo
 da seção 8 (mais recente primeiro).
 
-Estado documentado: `main` em 2026-09-21, já incluindo o balanço de débitos · última revisão deste documento:
-2026-09-21.
+Estado documentado: `main` em 2026-09-22, já incluindo o balanço de débitos e a reordenação de cards · última
+revisão deste documento: 2026-09-22.
 
 ---
 
@@ -76,6 +76,7 @@ erDiagram
         string groupId FK
         enum role "ADMIN ou MEMBER"
         datetime joinedAt
+        string_array cardOrder "ordem dos cards deste morador"
     }
     ShoppingItem {
         string id PK
@@ -148,6 +149,7 @@ Tipos Prisma. `?` = opcional (nullable). `cuid()` gera os ids.
 | userId → User, groupId → Group | String | FKs com cascade |
 | role | GroupMemberRole = MEMBER | `ADMIN` \| `MEMBER` |
 | joinedAt | DateTime | ordena a lista de casas do usuário |
+| cardOrder | String[] = [] | ordem dos cards da página da casa **para este morador** (ex.: `["debts","shopping","recipes"]`). `[]` = ordem padrão. Lido/normalizado sempre por `resolveCardOrder` (`src/lib/cards.ts`) |
 | — | `@@unique([userId, groupId])` | chave usada em todo o código: `userId_groupId` |
 
 ### ShoppingItem
@@ -231,6 +233,7 @@ confirmação; o servidor só quita os que são PENDING, da casa da URL e em que
 | Débito: quitar em lote (`{debtIds}`) | membro; só débitos PENDING da casa em que é parte | botão "Quitar" por pessoa, com confirmação |
 | Receita: criar | membro | membro |
 | Receita: remover | autor | autor |
+| Ordem dos cards | membro; grava só na própria associação | botão "Reordenar" visível a qualquer morador |
 | Alterar privacidade/senha da casa | — não existe | — |
 
 ---
@@ -241,6 +244,7 @@ confirmação; o servidor só quita os que são PENDING, da casa da URL e em que
 senha) · entrar por código (com fase de senha) · editar/excluir casa (admin) · gerenciar moradores (remover/sair) ·
 lista de compras (adicionar, marcar como comprado, remover) · débitos com divisão igual entre participantes ·
 **balanço líquido por pessoa** (aba Balanço, padrão do card) com **"Quitar tudo" por pessoa** e confirmação em modal ·
+**reordenar os cards da casa** arrastando (modo de edição com linhas compactas, por morador e por casa) ·
 receitas em Markdown (ingredientes e preparo) · perfil (nome, bio, data de nascimento) · upload de imagem
 (casa) · layout responsivo com subpáginas no mobile · skeletons de carregamento (`dashboard/loading.tsx`,
 `grupos/[id]/loading.tsx`) · 404 customizada.
@@ -291,6 +295,15 @@ do autor; confirme com o dono do projeto e corrija aqui.)
   mostra o saldo líquido para deixar claro o que é dado como pago. O cliente envia os `debtIds` que o usuário viu
   (o que se vê é o que se quita): um débito novo criado por outro morador depois do carregamento não é quitado sem
   ser visto, e o ramo já valida grupo + parte. Sem botão "quitar com todos" (um toque afetaria várias pessoas).
+- **Ordem dos cards por morador e por casa, em `GroupMember.cardOrder` (`String[]`).** Na associação, não no `User`,
+  porque a prioridade muda conforme a casa; como a página já busca a associação, a ordem vem sem query extra e é
+  aplicada no servidor (sem piscada de ordem errada). `resolveCardOrder` é tolerante de propósito — descarta chave
+  desconhecida e acrescenta as que faltam no fim —, então adicionar ou remover um card não exige migrar dados.
+  A rota grava com `updateMany` na própria associação: autoriza e escreve numa query só.
+- **@dnd-kit para o arrastar-e-soltar, com `MouseSensor` e `TouchSensor` separados** (e não `PointerSensor`): o
+  desktop arrasta ao mover 8px e o celular só depois de segurar 200ms, senão o gesto continua sendo rolagem da
+  página. No modo de edição os cards viram linhas compactas numa lista vertical — cabem na tela sem rolar, o que
+  elimina o conflito entre rolar e arrastar e escala quando houver mais cards.
 - **Ingredientes e preparo em Markdown**, renderizados por `react-markdown` + `remark-gfm` sem HTML bruto (seguro
   contra XSS) e com componentes estilizados no tema.
 - **Upload via Cloudinary *unsigned* pela nossa rota `/api/upload`** (exige sessão, valida `image/*` e 5 MB) — sem
@@ -360,6 +373,13 @@ C baixa.
 
 Mais recente primeiro. Formato: `AAAA-MM-DD — [commit] resumo`.
 
+- **2026-09-22** — *(feat)* **Reordenar os cards da casa.** Botão "Reordenar" acima do grid abre um modo de edição
+  com linhas compactas arrastáveis (@dnd-kit; segurar 200ms no celular, 8px no mouse, teclado e leitor de tela); a
+  ordem é confirmada em "Salvar". Schema: `GroupMember.cardOrder String[] @default([])` (aplicado no Neon com
+  `db push`; as associações existentes ficaram com `[]` = ordem padrão). Novos: `src/lib/cards.ts`,
+  `CardsGrid.tsx`, `PATCH /api/groups/[id]/cards`. Verificado: `tsc`, `lint`, `next build`, testes de
+  `resolveCardOrder`, render SSR da ordem e leitura da coluna no banco. **Não** testado em navegador nem em celular
+  de verdade — o gesto de toque precisa ser confirmado no aparelho.
 - **2026-09-21** — *(fix/ui)* Cards de Compras, Débitos (as duas abas) e Receitas: barra de rolagem afastada dos
   itens (`pr-2 -mr-2` no contêiner rolável), mantendo os três cards iguais lado a lado no desktop.
 - **2026-09-21** — *(feat)* **Balanço por pessoa + "Quitar tudo" no card de Débitos.** Aba

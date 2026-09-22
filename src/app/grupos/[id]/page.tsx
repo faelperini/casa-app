@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { redirect, notFound } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { resolveCardOrder } from "@/lib/cards";
 import { GroupClient } from "@/components/group/GroupClient";
 
 export default async function GroupPage({ params }: { params: { id: string } }) {
@@ -31,6 +32,7 @@ export default async function GroupPage({ params }: { params: { id: string } }) 
       group={group}
       currentUserId={session.user.id}
       currentUserRole={membership.role}
+      initialCardOrder={resolveCardOrder(membership.cardOrder)}
     />
   );
 }
