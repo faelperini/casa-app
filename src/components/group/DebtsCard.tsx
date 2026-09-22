@@ -1,15 +1,16 @@
 "use client";
 import { useState } from "react";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
-import Image from "next/image";
-import { Wallet, Plus, Check, User, CheckSquare, Square, Maximize2 } from "lucide-react";
+import { Wallet, Plus, Check, CheckSquare, Square, Maximize2 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
+import { MiniAvatar } from "@/components/group/MiniAvatar";
+import { DebtBalances } from "@/components/group/DebtBalances";
+import { computeBalances, type Debt } from "@/lib/debts";
 
 type Member = {
   id: string; role: string;
   user: { id: string; name: string | null; image: string | null; email: string | null };
 };
-type Debt = { id: string; description: string; amount: number; fromUserId: string; toUserId: string; status: string };
 
 type Props = {
   groupId: string;
@@ -23,6 +24,7 @@ type Props = {
 
 export function DebtsCard({ groupId, debts, members, currentUserId, onDebtsChange, onExpand, expanded }: Props) {
   const isDesktop = useIsDesktop();
+  const [tab, setTab]                 = useState<"balance" | "list">("balance");
   const [showAdd, setShowAdd]         = useState(false);
   const [desc, setDesc]               = useState("");
   const [amount, setAmount]           = useState("");
@@ -84,6 +86,25 @@ export function DebtsCard({ groupId, debts, members, currentUserId, onDebtsChang
     if (res.ok) onDebtsChange(debts.filter((d) => d.id !== debtId));
   }
 
+  // Quita em lote os débitos que o usuário viu na confirmação (o servidor só aceita os dos quais ele faz parte)
+  async function settleAll(debtIds: string[]) {
+    const res = await fetch(`/api/groups/${groupId}/debts`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ debtIds }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({})) as Record<string, string>;
+      throw new Error(data.error ?? "Erro ao quitar");
+    }
+    onDebtsChange(debts.filter((d) => !debtIds.includes(d.id)));
+  }
+
+  const myDebts = debts.filter((d) => d.fromUserId === currentUserId || d.toUserId === currentUserId);
+  const balanceRows = computeBalances(debts, currentUserId).map((b) => ({
+    ...b, name: memberName(b.userId), image: memberImage(b.userId),
+  }));
+
   const canSubmit = !loading && !!desc.trim() && !!amount && parsedAmount > 0 && selectedDebtors.length > 0;
 
   return (
@@ -112,16 +133,33 @@ export function DebtsCard({ groupId, debts, members, currentUserId, onDebtsChang
         </div>
       </div>
 
+      {/* Tabs */}
+      <div role="tablist" className="flex bg-cream-100 rounded-xl p-1 mb-4">
+        {([["balance", "Balanço"], ["list", `Débitos (${myDebts.length})`]] as const).map(([key, label]) => (
+          <button key={key} role="tab" aria-selected={tab === key} onClick={() => setTab(key)}
+            className={`flex-1 h-9 rounded-lg font-body text-xs font-semibold transition-colors cursor-pointer
+                        ${tab === key ? "bg-cream-50 text-forest-800 shadow-sm" : "text-stone-warm hover:text-forest-800"}`}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Balance */}
+      {tab === "balance" && (
+        <DebtBalances balances={balanceRows} onSettle={settleAll} expanded={expanded} />
+      )}
+
       {/* Empty */}
-      {debts.filter((d) => d.fromUserId === currentUserId || d.toUserId === currentUserId).length === 0 && (
+      {tab === "list" && myDebts.length === 0 && (
         <p className="font-body text-xs text-stone-warm text-center py-6">
           Tudo certo! Nenhum débito pendente.
         </p>
       )}
 
       {/* List */}
+      {tab === "list" && (
       <div className={`flex-1 space-y-2 overflow-y-auto ${expanded ? "" : "max-h-64"}`}>
-        {debts.filter((d) => d.fromUserId === currentUserId || d.toUserId === currentUserId).map((debt) => {
+        {myDebts.map((debt) => {
           const iOwe   = debt.toUserId === currentUserId;
           const theyOweMe = debt.fromUserId === currentUserId;
           const avatarImg = iOwe
@@ -152,6 +190,7 @@ export function DebtsCard({ groupId, debts, members, currentUserId, onDebtsChang
           );
         })}
       </div>
+      )}
 
       {/* Add debt modal */}
       <Modal open={showAdd} onClose={handleClose} title="Novo débito">
@@ -225,16 +264,6 @@ export function DebtsCard({ groupId, debts, members, currentUserId, onDebtsChang
           </div>
         </div>
       </Modal>
-    </div>
-  );
-}
-
-function MiniAvatar({ img }: { img: string | null }) {
-  return img ? (
-    <Image src={img} alt="avatar" width={28} height={28} className="rounded-full object-cover flex-shrink-0" />
-  ) : (
-    <div className="w-7 h-7 rounded-full bg-cream-300 flex items-center justify-center flex-shrink-0">
-      <User size={13} className="text-stone-warm" />
     </div>
   );
 }

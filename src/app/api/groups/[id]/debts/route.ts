@@ -37,13 +37,35 @@ export async function POST(req: Request, { params }: Params) {
 }
 
 // PATCH /api/groups/[id]/debts — marcar como quitado
+// { debtId } = um débito · { debtIds } = em lote (só os PENDING desta casa em que o usuário é parte)
 export async function PATCH(req: Request, { params }: Params) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!(await assertMember(session.user.id, params.id)))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { debtId } = await req.json();
+  const { debtId, debtIds } = await req.json();
+
+  if (debtIds !== undefined) {
+    if (
+      !Array.isArray(debtIds) || debtIds.length === 0 || debtIds.length > 200 ||
+      !debtIds.every((id) => typeof id === "string")
+    ) {
+      return NextResponse.json({ error: "debtIds inválido" }, { status: 400 });
+    }
+
+    const { count } = await prisma.debt.updateMany({
+      where: {
+        id: { in: debtIds },
+        groupId: params.id,
+        status: "PENDING",
+        OR: [{ fromUserId: session.user.id }, { toUserId: session.user.id }],
+      },
+      data: { status: "SETTLED" },
+    });
+    return NextResponse.json({ count });
+  }
+
   const debt = await prisma.debt.update({
     where: { id: debtId },
     data: { status: "SETTLED" },
