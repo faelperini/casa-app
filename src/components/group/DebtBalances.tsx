@@ -67,7 +67,7 @@ export function DebtBalances({ balances, onSettle, expanded }: Props) {
       </div>
 
       {/* Uma linha por pessoa */}
-      <ul className={`flex-1 space-y-2 overflow-y-auto ${expanded ? "" : "max-h-64"}`}>
+      <ul className={`flex-1 space-y-2 overflow-y-auto pr-2 -mr-2 ${expanded ? "" : "max-h-64"}`}>
         {balances.map((b) => {
           const count = b.debtIds.length;
           const amountClass = b.cents > 0 ? "text-forest-700" : "text-terra-500";

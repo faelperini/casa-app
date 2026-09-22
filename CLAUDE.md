@@ -106,6 +106,9 @@ Rotas com sub-recurso usam o método HTTP + **body JSON** para identificar o ite
 - Fontes: `font-display` = Fraunces (títulos), `font-body` = Plus Jakarta Sans.
 - Classes utilitárias (em `globals.css`): `.card`, `.btn-primary`, `.btn-secondary`, `.btn-terra`, `.input`, `.label`,
   `.grain` (textura), `.animate-fade-up` + `-1…-5` (atraso escalonado). Use `min-h-dvh`, não `min-h-screen`.
+- Listas roláveis dentro de `.card` (`overflow-y-auto max-h-64`) levam `pr-2 -mr-2`: a barra de rolagem (6px, custom em
+  `globals.css`) fica no padding do card em vez de encostar nos itens. Já aplicado em Compras, Débitos e Receitas —
+  manter em qualquer lista rolável nova.
 - Inputs têm 16px em ponteiro `coarse` (evita zoom do iOS) — não sobrescrever.
 
 ## Armadilhas (leia antes de codar)

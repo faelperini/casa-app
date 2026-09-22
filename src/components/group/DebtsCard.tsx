@@ -158,7 +158,7 @@ export function DebtsCard({ groupId, debts, members, currentUserId, onDebtsChang
 
       {/* List */}
       {tab === "list" && (
-      <div className={`flex-1 space-y-2 overflow-y-auto ${expanded ? "" : "max-h-64"}`}>
+      <div className={`flex-1 space-y-2 overflow-y-auto pr-2 -mr-2 ${expanded ? "" : "max-h-64"}`}>
         {myDebts.map((debt) => {
           const iOwe   = debt.toUserId === currentUserId;
           const theyOweMe = debt.fromUserId === currentUserId;

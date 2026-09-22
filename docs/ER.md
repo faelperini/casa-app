@@ -360,6 +360,8 @@ C baixa.
 
 Mais recente primeiro. Formato: `AAAA-MM-DD — [commit] resumo`.
 
+- **2026-09-21** — *(fix/ui)* Cards de Compras, Débitos (as duas abas) e Receitas: barra de rolagem afastada dos
+  itens (`pr-2 -mr-2` no contêiner rolável), mantendo os três cards iguais lado a lado no desktop.
 - **2026-09-21** — *(feat)* **Balanço por pessoa + "Quitar tudo" no card de Débitos.** Aba
   "Balanço" (padrão) / "Débitos"; resumo A receber / A pagar; uma linha por morador com saldo líquido e botão "Quitar",
   que abre confirmação em modal (mostra nº de débitos e saldo; bloqueia toque duplo). `PATCH …/debts` agora aceita

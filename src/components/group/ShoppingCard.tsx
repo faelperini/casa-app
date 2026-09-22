@@ -108,7 +108,7 @@ export function ShoppingCard({ groupId, items, onItemsChange, onExpand, expanded
       )}
 
       {/* Unchecked items */}
-      <div className={`flex-1 space-y-1.5 overflow-y-auto ${expanded ? "" : "max-h-64"}`}>
+      <div className={`flex-1 space-y-1.5 overflow-y-auto pr-2 -mr-2 ${expanded ? "" : "max-h-64"}`}>
         {unchecked.map((item) => (
           <ItemRow key={item.id} item={item} onToggle={toggleItem} onDelete={deleteItem} />
         ))}

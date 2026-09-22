@@ -88,7 +88,7 @@ export function RecipesCard({ groupId, recipes, currentUserId, onRecipesChange, 
       )}
 
       {/* List */}
-      <div className={`flex-1 space-y-1.5 overflow-y-auto ${expandedView ? "" : "max-h-64"}`}>
+      <div className={`flex-1 space-y-1.5 overflow-y-auto pr-2 -mr-2 ${expandedView ? "" : "max-h-64"}`}>
         {recipes.map((recipe) => (
           <div key={recipe.id}
             className="bg-cream-100 rounded-xl overflow-hidden group">
