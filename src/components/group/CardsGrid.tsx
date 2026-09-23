@@ -1,11 +1,12 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   DndContext, DragOverlay, KeyboardSensor, MouseSensor, TouchSensor,
   closestCenter, useSensor, useSensors,
-  type Announcements, type DragEndEvent, type DragStartEvent,
+  type Announcements, type DragEndEvent, type DragOverEvent, type DragStartEvent,
 } from "@dnd-kit/core";
-import { restrictToParentElement, restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import {
   SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
@@ -33,8 +34,12 @@ export function CardsGrid({ initialOrder, cards, onSave }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft]     = useState<CardKey[]>(initialOrder);
   const [dragging, setDragging] = useState<CardKey | null>(null);
+  const [overlayPos, setOverlayPos] = useState(1);
   const [saving, setSaving]   = useState(false);
   const [error, setError]     = useState("");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   // Mouse e toque separados de propósito: no desktop arrasta ao mover 8px; no celular só depois de
   // segurar 200ms, senão o gesto continua sendo rolagem da página.
@@ -64,6 +69,12 @@ export function CardsGrid({ initialOrder, cards, onSave }: Props) {
 
   function handleDragStart(e: DragStartEvent) {
     setDragging(e.active.id as CardKey);
+    setOverlayPos(draft.indexOf(e.active.id as CardKey) + 1);
+  }
+  // Mantém o número do card flutuante igual ao lugar onde ele vai cair
+  function handleDragOver(e: DragOverEvent) {
+    const over = e.over && draft.indexOf(e.over.id as CardKey);
+    if (over !== null && over !== undefined && over >= 0) setOverlayPos(over + 1);
   }
   function handleDragEnd(e: DragEndEvent) {
     setDragging(null);
@@ -101,25 +112,29 @@ export function CardsGrid({ initialOrder, cards, onSave }: Props) {
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
-          modifiers={[restrictToVerticalAxis, restrictToParentElement]}
           accessibility={{ announcements }}
           onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
           onDragCancel={() => setDragging(null)}
         >
           <SortableContext items={draft} strategy={verticalListSortingStrategy}>
             <ul className="space-y-2">
-              {draft.map((key, i) => (
-                <SortableRow key={key} cardKey={key} position={i + 1} />
+              {draft.map((key) => (
+                <SortableRow key={key} cardKey={key} />
               ))}
             </ul>
           </SortableContext>
 
-          <DragOverlay>
-            {dragging && (
-              <RowVisual cardKey={dragging} position={draft.indexOf(dragging) + 1} lifted />
-            )}
-          </DragOverlay>
+          {/* No portal do body de propósito: dentro do card, a animação de transform do card vira o
+              bloco de referência do position:fixed e o overlay fica deslocado do cursor.
+              Os modifiers vão no overlay, não no DndContext — é o overlay que segue o cursor. */}
+          {mounted && createPortal(
+            <DragOverlay modifiers={[restrictToVerticalAxis]} dropAnimation={null}>
+              {dragging && <RowVisual cardKey={dragging} position={overlayPos} lifted />}
+            </DragOverlay>,
+            document.body,
+          )}
         </DndContext>
 
         {error && <p className="text-xs text-terra-500 font-body mt-3">{error}</p>}
@@ -157,8 +172,10 @@ export function CardsGrid({ initialOrder, cards, onSave }: Props) {
   );
 }
 
-function SortableRow({ cardKey, position }: { cardKey: CardKey; position: number }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cardKey });
+function SortableRow({ cardKey }: { cardKey: CardKey }) {
+  // newIndex acompanha o arraste, então o número bate com o lugar onde a linha está agora
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging, newIndex } =
+    useSortable({ id: cardKey });
 
   return (
     <li
@@ -166,15 +183,19 @@ function SortableRow({ cardKey, position }: { cardKey: CardKey; position: number
       {...attributes}
       {...listeners}
       style={{
-        transform: CSS.Transform.toString(transform),
+        transform: CSS.Translate.toString(transform),
         transition,
         WebkitTouchCallout: "none", // sem menu de seleção do Safari ao segurar
       }}
-      className={`rounded-2xl outline-none cursor-grab active:cursor-grabbing select-none touch-manipulation
-                  focus-visible:ring-2 focus-visible:ring-forest-700/30
-                  ${isDragging ? "opacity-40" : ""}`}
+      className="rounded-2xl outline-none cursor-grab active:cursor-grabbing select-none
+                 touch-manipulation focus-visible:ring-2 focus-visible:ring-forest-700/30"
     >
-      <RowVisual cardKey={cardKey} position={position} />
+      {isDragging ? (
+        // Lugar vago: quem segue o cursor é o card do DragOverlay
+        <div className="min-h-[56px] rounded-2xl border-2 border-dashed border-cream-300 bg-cream-100/50" />
+      ) : (
+        <RowVisual cardKey={cardKey} position={newIndex + 1} />
+      )}
     </li>
   );
 }

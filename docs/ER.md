@@ -373,6 +373,14 @@ C baixa.
 
 Mais recente primeiro. Formato: `AAAA-MM-DD — [commit] resumo`.
 
+- **2026-09-22** — *(fix)* **Arraste do reordenar não acompanhava o cursor.** Três causas: o `DragOverlay` ficava
+  dentro do card e o `transform` do `.animate-fade-up` o tornava o bloco de referência do `position: fixed`,
+  deslocando o card flutuante 24px (= o `p-6` do card) — resolvido com `createPortal` no `body`; os `modifiers`
+  estavam no `DndContext` em vez do `DragOverlay`, que é quem segue o cursor; e os números `1º/2º/3º` vinham do
+  `draft` congelado, agora vêm do `newIndex` do `useSortable`. A linha arrastada virou um tracejado vago no lugar do
+  fantasma duplicado. Verificado num navegador de verdade (Edge via Playwright, página temporária sem login):
+  desvio do cursor de 24px → 1px, arrastar para cima e para baixo, clique parado não reordena, movimento de 5px não
+  ativa, e no toque o deslize rápido continua rolando a página enquanto segurar 300ms pega o card.
 - **2026-09-22** — *(feat)* **Reordenar os cards da casa.** Botão "Reordenar" acima do grid abre um modo de edição
   com linhas compactas arrastáveis (@dnd-kit; segurar 200ms no celular, 8px no mouse, teclado e leitor de tela); a
   ordem é confirmada em "Salvar". Schema: `GroupMember.cardOrder String[] @default([])` (aplicado no Neon com

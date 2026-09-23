@@ -128,3 +128,7 @@ Rotas com sub-recurso usam o método HTTP + **body JSON** para identificar o ite
    quitar em lote (`PATCH debts {debtIds}`) fazem isso; shopping e o `PATCH debts {debtId}` não.
 4. `Debt.fromUserId`, `Debt.toUserId` e `Recipe.authorId` **não têm FK** para `User` (são strings soltas).
 5. O schema é aplicado com `db push` e `prisma/migrations/` é ignorado pelo git — não há histórico de migrações.
+6. **Elemento `position: fixed` dentro de um card não se posiciona pela viewport.** `.animate-fade-up` anima
+   `transform`, e isso faz do elemento animado o bloco de referência dos filhos `fixed` — eles saem deslocados pelo
+   padding do card (foi o bug do card flutuante do `CardsGrid`, deslocado 24px do cursor). Overlay, dropdown ou
+   tooltip que precise se guiar pela tela vai num `createPortal(..., document.body)`, como o `Modal` já faz.
