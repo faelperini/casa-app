@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { ShoppingCart, Plus, Trash2, Check, Maximize2 } from "lucide-react";
+import { Modal } from "@/components/ui/Modal";
 
 type Item = { id: string; name: string; quantity: string | null; checked: boolean };
 type Props = {
@@ -18,6 +19,9 @@ export function ShoppingCard({ groupId, items, onItemsChange, onExpand, expanded
   const [newQty, setNewQty]           = useState("");
   const [adding, setAdding]           = useState(false);
   const [showForm, setShowForm]       = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [clearing, setClearing]         = useState(false);
+  const [clearError, setClearError]     = useState("");
 
   const unchecked = items.filter((i) => !i.checked);
   const checked   = items.filter((i) => i.checked);
@@ -57,6 +61,28 @@ export function ShoppingCard({ groupId, items, onItemsChange, onExpand, expanded
       body: JSON.stringify({ itemId }),
     });
     if (res.ok) onItemsChange(items.filter((i) => i.id !== itemId));
+  }
+
+  // Apaga só os itens que estavam na tela: um item que alguém acabou de somar não some sem ser visto
+  async function clearAll() {
+    if (clearing) return;
+    setClearing(true); setClearError("");
+    try {
+      const itemIds = items.map((i) => i.id);
+      const res = await fetch(`/api/groups/${groupId}/shopping`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemIds }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({})) as Record<string, string>;
+        throw new Error(data.error ?? "Erro ao limpar a lista");
+      }
+      onItemsChange(items.filter((i) => !itemIds.includes(i.id)));
+      setConfirmClear(false);
+    } catch (e: unknown) {
+      setClearError(e instanceof Error ? e.message : "Erro ao limpar a lista");
+    } finally { setClearing(false); }
   }
 
   return (
@@ -129,16 +155,50 @@ export function ShoppingCard({ groupId, items, onItemsChange, onExpand, expanded
       </div>
 
       {/* Footer counter */}
-      <div className="pt-3 mt-3 border-t border-cream-200 flex items-center justify-between">
-        <span className="font-body text-xs text-stone-warm">
+      <div className="pt-3 mt-3 border-t border-cream-200 flex items-center justify-between gap-2">
+        <span className="font-body text-xs text-stone-warm min-w-0 truncate">
           {unchecked.length} {unchecked.length === 1 ? "item" : "itens"} restante{unchecked.length !== 1 ? "s" : ""}
+          {checked.length > 0 && (
+            <span className="text-terra-400"> · {checked.length} comprado{checked.length !== 1 ? "s" : ""}</span>
+          )}
         </span>
-        {checked.length > 0 && (
-          <span className="font-body text-xs text-terra-400">
-            {checked.length} comprado{checked.length !== 1 ? "s" : ""}
-          </span>
+        {items.length > 0 && (
+          <button onClick={() => { setClearError(""); setConfirmClear(true); }}
+            className="flex items-center gap-1 font-body text-xs text-terra-500 hover:text-terra-600
+                       transition-colors cursor-pointer flex-shrink-0 py-1">
+            <Trash2 size={12} /> Limpar
+          </button>
         )}
       </div>
+
+      {/* Confirmação de limpar a lista */}
+      <Modal open={confirmClear} onClose={() => { if (!clearing) setConfirmClear(false); }} title="Limpar a lista?">
+        <div className="space-y-4">
+          <p className="font-body text-sm text-forest-800">
+            {items.length === 1
+              ? "O único item da lista será apagado."
+              : `Os ${items.length} itens da lista serão apagados.`}
+            {unchecked.length > 0 && (
+              <> Inclusive {unchecked.length === 1 ? "o que ainda não foi comprado" : `os ${unchecked.length} que ainda não foram comprados`}.</>
+            )}
+          </p>
+
+          <p className="font-body text-xs text-stone-warm">
+            Vale para todos os moradores da casa. Não dá para desfazer.
+          </p>
+
+          {clearError && <p className="text-xs text-terra-500 font-body">{clearError}</p>}
+
+          <div className="flex gap-2 pt-1">
+            <button onClick={() => setConfirmClear(false)} disabled={clearing} className="btn-secondary flex-1 py-3">
+              Cancelar
+            </button>
+            <button onClick={clearAll} disabled={clearing} className="btn-terra flex-1 py-3">
+              {clearing ? "Limpando…" : "Limpar tudo"}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

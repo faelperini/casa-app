@@ -44,13 +44,29 @@ export async function PATCH(req: Request, { params }: Params) {
 }
 
 // DELETE /api/groups/[id]/shopping — remove item
+// { itemId } = um item · { itemIds } = em lote (limpar a lista), só itens desta casa
 export async function DELETE(req: Request, { params }: Params) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!(await assertMember(session.user.id, params.id)))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { itemId } = await req.json();
+  const { itemId, itemIds } = await req.json();
+
+  if (itemIds !== undefined) {
+    if (
+      !Array.isArray(itemIds) || itemIds.length === 0 || itemIds.length > 500 ||
+      !itemIds.every((id) => typeof id === "string")
+    ) {
+      return NextResponse.json({ error: "itemIds inválido" }, { status: 400 });
+    }
+
+    const { count } = await prisma.shoppingItem.deleteMany({
+      where: { id: { in: itemIds }, groupId: params.id },
+    });
+    return NextResponse.json({ count });
+  }
+
   await prisma.shoppingItem.delete({ where: { id: itemId } });
   return NextResponse.json({ ok: true });
 }

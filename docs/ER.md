@@ -228,6 +228,7 @@ confirmação; o servidor só quita os que são PENDING, da casa da URL e em que
 | Remover outro morador | ADMIN | ADMIN (X no hover) |
 | Sair da casa | membro (ADMIN só se for o último) | não-admin vê "Sair da casa" |
 | Compras: adicionar / marcar / remover | membro | membro |
+| Compras: limpar a lista | membro; só itens da casa da URL | botão "Limpar" no rodapé, com confirmação |
 | Débito: criar | membro | membro |
 | Débito: quitar (`{debtId}`) | membro (**qualquer um**) | só quem é parte no débito |
 | Débito: quitar em lote (`{debtIds}`) | membro; só débitos PENDING da casa em que é parte | botão "Quitar" por pessoa, com confirmação |
@@ -242,7 +243,8 @@ confirmação; o servidor só quita os que são PENDING, da casa da URL e em que
 
 **Funcionando:** login Google · dashboard com casas do usuário · criar casa (foto, descrição, pública/privada com
 senha) · entrar por código (com fase de senha) · editar/excluir casa (admin) · gerenciar moradores (remover/sair) ·
-lista de compras (adicionar, marcar como comprado, remover) · débitos com divisão igual entre participantes ·
+lista de compras (adicionar, marcar como comprado, remover, **limpar a lista inteira** com confirmação) ·
+débitos com divisão igual entre participantes ·
 **balanço líquido por pessoa** (aba Balanço, padrão do card) com **"Quitar tudo" por pessoa** e confirmação em modal ·
 **reordenar os cards da casa** arrastando (modo de edição com linhas compactas, por morador e por casa) ·
 receitas em Markdown (ingredientes e preparo) · perfil (nome, bio, data de nascimento) · upload de imagem
@@ -328,7 +330,8 @@ C baixa.
 - **A — IDOR em shopping e debts:** `PATCH/DELETE …/shopping` e `PATCH …/debts` só conferem que o usuário é membro
   da casa da URL; `itemId`/`debtId` **não** são verificados contra `params.id`. Um membro de qualquer casa que
   conheça um id altera item/débito de outra casa (cuids não são adivinháveis, mas a checagem deve existir).
-  `recipes` DELETE já faz certo (`recipe.groupId !== params.id`).
+  Já fazem certo: `recipes` DELETE (`recipe.groupId !== params.id`) e os ramos em lote criados depois —
+  `PATCH debts {debtIds}` e `DELETE shopping {itemIds}`, ambos com `groupId: params.id` no `where`.
 - **A — Quitar débito (`{debtId}`):** qualquer membro pode quitar qualquer débito via API; a UI só mostra o botão às
   partes. (O ramo em lote `{debtIds}`, criado em 2026-09-21, já restringe a casa da URL + partes.)
 - **C — ✓ individual de quitar** (aba Débitos) só aparece no hover: no celular fica invisível porém tocável, dá para
@@ -373,6 +376,13 @@ C baixa.
 
 Mais recente primeiro. Formato: `AAAA-MM-DD — [commit] resumo`.
 
+- **2026-09-23** — *(feat)* **Limpar a lista de compras.** Botão "Limpar" no rodapé do card (some quando a lista
+  está vazia) que abre uma confirmação dizendo quantos itens somem e quantos ainda não foram comprados; apaga
+  **todos** os itens, não só os comprados. `DELETE …/shopping` passou a aceitar `{itemIds}` (só itens da casa da
+  URL, responde `{count}`); o cliente manda os ids que estavam na tela, então um item que alguém acabou de somar
+  não some sem ser visto. Verificado no navegador (Edge via Playwright, página temporária): rodapé numa linha só no
+  card estreito, confirmação com o texto certo, Cancelar não apaga, erro da API mantém a lista e o modal abertos,
+  sucesso esvazia e fecha, botões de 44px no celular.
 - **2026-09-22** — *(fix)* **Arraste do reordenar não acompanhava o cursor.** Três causas: o `DragOverlay` ficava
   dentro do card e o `transform` do `.animate-fade-up` o tornava o bloco de referência do `position: fixed`,
   deslocando o card flutuante 24px (= o `p-6` do card) — resolvido com `createPortal` no `body`; os `modifiers`

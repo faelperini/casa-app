@@ -32,6 +32,11 @@ npm run db:studio    # prisma studio
 
 Ambiente de desenvolvimento: Windows (PowerShell/Git Bash). Branch principal: `main`.
 
+> Depois de um `next build`, **apague `.next`** antes do próximo `npm run dev`: o dev reaproveita a pasta deixada
+> pela build de produção e passa a servir os chunks do `_next` como 404 — a página abre mas não hidrata, e nenhum
+> clique funciona. Vale também conferir se o servidor antigo morreu: se a porta 3000 continuar ocupada, o novo sobe
+> na 3001/3002 e você testa o servidor errado.
+
 ## Variáveis de ambiente (só nomes — `.env` é ignorado pelo git; nunca ler/commitar valores)
 
 `DATABASE_URL` (runtime) · `DIRECT_URL` (`directUrl` do Prisma, para `db push`/migrate) · `GOOGLE_CLIENT_ID` ·
@@ -79,7 +84,7 @@ Todas exigem sessão (`getServerSession(authOptions)` → 401). "membro" = exist
 | POST | `/api/groups/join` | login | entra por código, em 2 fases: sem senha → `{requiresPassword, groupName}`; com senha → entra |
 | GET / PATCH / DELETE | `/api/groups/[id]` | membro / ADMIN / ADMIN | casa completa / edita nome, descrição, imagem / exclui (cascade) |
 | DELETE | `/api/groups/[id]/members` | membro | body `{userId?}`: ADMIN remove alguém, membro sai; ADMIN só sai se for o último (apaga a casa) |
-| POST / PATCH / DELETE | `/api/groups/[id]/shopping` | membro | adiciona `{name, quantity}` / alterna `{itemId, checked}` / remove `{itemId}` |
+| POST / PATCH / DELETE | `/api/groups/[id]/shopping` | membro | adiciona `{name, quantity}` / alterna `{itemId, checked}` / remove `{itemId}` ou limpa a lista com `{itemIds}` (só itens da casa; responde `{count}`) |
 | POST / PATCH | `/api/groups/[id]/debts` | membro | cria `{description, amount, toUserId}` / quita `{debtId}` ou em lote `{debtIds}` (só PENDING da casa em que o usuário é parte; responde `{count}`) |
 | POST / DELETE | `/api/groups/[id]/recipes` | membro | cria / remove `{recipeId}` (só o autor) |
 | PATCH | `/api/groups/[id]/cards` | membro | salva `{order}` (ordem dos cards **deste** morador nesta casa; `updateMany` na própria associação autoriza e grava) |
